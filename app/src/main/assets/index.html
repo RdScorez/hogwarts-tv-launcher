@@ -73,88 +73,13 @@
     font-size: 11px; color: #694118; text-align: right;
   }
 
-  /* Bottom Dock: Native Focusable Buttons for Android TV D-Pad */
-  #dockWrapper {
-    position: fixed; bottom: 54px; left: 0; right: 0; z-index: 15;
-    display: flex; justify-content: center; align-items: flex-end;
-  }
-  #appRow {
-    display: flex; gap: 46px; align-items: center; position: relative;
-    padding: 18px 42px; border-radius: 32px;
-    background: rgba(12, 10, 8, 0.62); border: 1px solid rgba(218, 178, 96, 0.35);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.75);
-  }
-  button.app-card {
-    appearance: none; -webkit-appearance: none; outline: none;
-    width: 178px; height: 116px; border-radius: 20px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-    background: rgba(26, 21, 16, 0.88); border: 2px solid rgba(185, 146, 74, 0.35);
-    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s, box-shadow 0.3s;
-    position: relative;
-  }
-  button.app-card:focus, button.app-card.selected {
-    transform: translateY(-14px) scale(1.1);
-    border-color: #ffd670;
-    box-shadow: 0 14px 32px rgba(255, 204, 92, 0.48), inset 0 0 18px rgba(255, 214, 112, 0.25);
-    background: rgba(46, 35, 21, 0.98);
-  }
-  .app-badge {
-    font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: 'Trebuchet MS', sans-serif;
-  }
-  .app-label { font-size: 13px; color: #dfcba3; letter-spacing: 0.8px; }
-
-  /* Subtle Settings Gear Button in Bottom-Right Corner */
-  #settingsBtn {
-    appearance: none; -webkit-appearance: none; outline: none;
-    position: fixed; bottom: 26px; right: 34px; z-index: 20;
-    background: rgba(24, 18, 12, 0.78); color: #e5be6b;
-    border: 1.5px solid rgba(218, 178, 96, 0.45); border-radius: 50px;
-    padding: 10px 18px; font-family: Georgia, serif; font-size: 14px;
-  }
-  #settingsBtn:focus {
-    border-color: #ffd670; background: #3d2d1c; color: #fff;
-    box-shadow: 0 0 18px rgba(255, 214, 112, 0.45); transform: scale(1.06);
-  }
-
-  /* Animated Flying & Perching Hedwig */
-  #hedwig {
-    position: fixed; width: 108px; height: 96px; z-index: 30; pointer-events: none;
-    transition: left 0.58s cubic-bezier(0.25, 0.9, 0.3, 1.05), top 0.58s cubic-bezier(0.25, 0.9, 0.3, 1.05);
-    filter: drop-shadow(0 8px 14px rgba(0,0,0,0.85));
-  }
-  #hedwig.flying { animation: owlBob 0.32s ease-in-out infinite alternate; }
-  #hedwig .wing-left, #hedwig .wing-right { transform-origin: 50% 48%; transition: transform 0.25s ease; }
-  #hedwig.flying .wing-left { animation: flapLeft 0.24s ease-in-out infinite alternate; }
-  #hedwig.flying .wing-right { animation: flapRight 0.24s ease-in-out infinite alternate; }
-  #hedwig.perched .wing-left { transform: scaleX(0.22) rotate(12deg); }
-  #hedwig.perched .wing-right { transform: scaleX(0.22) rotate(-12deg); }
-
-  @keyframes flapLeft { from { transform: rotate(-28deg) scaleY(1.05); } to { transform: rotate(34deg) scaleY(0.75); } }
-  @keyframes flapRight { from { transform: rotate(28deg) scaleY(1.05); } to { transform: rotate(-34deg) scaleY(0.75); } }
-  @keyframes owlBob { from { transform: translateY(-14px) scale(1.08); } to { transform: translateY(-2px) scale(1.02); } }
-
-  /* Enchantment Drawer */
-  #settingsModal {
-    position: fixed; inset: 0; background: rgba(6, 5, 10, 0.85); z-index: 50;
-    display: none; align-items: center; justify-content: center;
-  }
-  .modal-box {
-    width: 520px; background: #1c150e; border: 2px solid #c99b42; border-radius: 20px;
-    padding: 26px 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.9);
-  }
-  .modal-box h3 { margin: 0 0 18px; color: #ffd778; text-align: center; font-size: 22px; }
-  button.setting-item {
-    appearance: none; -webkit-appearance: none; outline: none; width: 100%;
-    padding: 14px 16px; margin-bottom: 10px; border-radius: 12px; color: #f6e7c1;
-    background: #2b2015; border: 1.5px solid #5c4321; font-family: Georgia, serif;
-    display: flex; justify-content: space-between; align-items: center; font-size: 16px;
-  }
-  button.setting-item:focus { border-color: #ffd778; background: #3d2d1c; box-shadow: 0 0 16px rgba(255,215,120,0.35); }
+  /* Hide duplicate HTML dock/owl/settings since native Kotlin overlay handles them */
+  #dockWrapper, #settingsBtn, #hedwig, #settingsModal { display: none !important; }
 </style>
 </head>
 <body>
 
-  <img id="wallpaper" src="bg_1.png" alt="Hogwarts Scene" />
+  <img id="wallpaper" src="file:///android_asset/bg_1.png" alt="Hogwarts Scene" />
   <div id="dayNightTint"></div>
   <canvas id="weatherCanvas"></canvas>
   <div id="vignette"></div>
@@ -202,77 +127,6 @@
     <div class="parchment-footer" id="padUrlHint">Phone Pad: http://... :8080</div>
   </div>
 
-  <!-- Flying & Perching Hedwig SVG -->
-  <div id="hedwig" class="perched">
-    <svg viewBox="0 0 140 120" width="108" height="96">
-      <path class="wing-left" d="M52,58 C24,36 4,46 6,66 C18,68 36,68 52,66 Z" fill="#f7f7f9" stroke="#cfd4dc" stroke-width="1.5"/>
-      <path class="wing-right" d="M88,58 C116,36 136,46 134,66 C122,68 104,68 88,66 Z" fill="#f7f7f9" stroke="#cfd4dc" stroke-width="1.5"/>
-      <polygon points="62,92 70,112 78,92" fill="#e6e9ef" />
-      <ellipse cx="70" cy="68" rx="22" ry="28" fill="#ffffff" stroke="#d5dae2" stroke-width="1.5"/>
-      <path d="M58,64 Q61,67 64,64 M75,66 Q78,69 81,66 M61,76 Q64,79 67,76 M73,77 Q76,80 79,77 M67,84 Q70,87 73,84"
-            stroke="#6b7280" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      <circle cx="70" cy="38" r="17" fill="#ffffff" stroke="#d5dae2" stroke-width="1.5"/>
-      <circle cx="63" cy="37" r="4.3" fill="#f59e0b" />
-      <circle cx="63" cy="37" r="2.1" fill="#111827" />
-      <circle cx="62" cy="36" r="0.8" fill="#ffffff" />
-      <circle cx="77" cy="37" r="4.3" fill="#f59e0b" />
-      <circle cx="77" cy="37" r="2.1" fill="#111827" />
-      <circle cx="76" cy="36" r="0.8" fill="#ffffff" />
-      <polygon points="67,41 73,41 70,47" fill="#374151" />
-      <path d="M61,95 L58,102 M63,95 L63,103 M77,95 L77,103 M79,95 L82,102" stroke="#d97706" stroke-width="2.2" stroke-linecap="round"/>
-    </svg>
-  </div>
-
-  <!-- Bottom App Dock (4 Native Focusable Buttons) -->
-  <div id="dockWrapper">
-    <div id="appRow">
-      <button class="app-card selected" data-pkg="com.netflix.ninja">
-        <div class="app-badge" style="color:#E50914;">NETFLIX</div>
-        <div class="app-label">Netflix</div>
-      </button>
-      <button class="app-card" data-pkg="com.google.android.youtube.tv">
-        <div class="app-badge" style="color:#FF2A2A;">▶ YouTube</div>
-        <div class="app-label">YouTube</div>
-      </button>
-      <button class="app-card" data-pkg="com.fancode.tv">
-        <div class="app-badge" style="color:#FF6B00;">FANCODE</div>
-        <div class="app-label">FanCode</div>
-      </button>
-      <button class="app-card" data-pkg="in.startv.hotstar">
-        <div class="app-badge" style="color:#38BDF8;">JioHotstar</div>
-        <div class="app-label">JioHotstar</div>
-      </button>
-    </div>
-  </div>
-
-  <button id="settingsBtn">✦ Enchantments</button>
-
-  <!-- Enchantment Settings Drawer -->
-  <div id="settingsModal">
-    <div class="modal-box">
-      <h3>✦ Hogwarts Enchantment Settings ✦</h3>
-      <button class="setting-item" id="optWeather">
-        <span>Live Weather & Day/Night Cycle</span>
-        <strong id="valWeather" style="color:#ffd778;">ON</strong>
-      </button>
-      <button class="setting-item" id="optWallpaper">
-        <span>Change Today's Wizarding Scene</span>
-        <strong id="valWallpaper" style="color:#ffd778;">Auto (Daily)</strong>
-      </button>
-      <button class="setting-item" id="optClearPad">
-        <span>Clear Marauder's Corner Note</span>
-        <strong style="color:#f87171;">Clear</strong>
-      </button>
-      <button class="setting-item" id="optSysSettings">
-        <span>Open Sony Android TV Settings</span>
-        <strong>Open →</strong>
-      </button>
-      <button class="setting-item" id="optCloseModal" style="justify-content:center;color:#ffd778;">
-        Close Enchantments
-      </button>
-    </div>
-  </div>
-
 <script>
   const SCENES = [
     { file: 'bg_1.png', title: 'HOGWARTS CASTLE' },
@@ -284,15 +138,11 @@
     { file: 'bg_7.png', title: 'GRYFFINDOR COMMON ROOM' }
   ];
 
-  let flyTimeout = null;
   let weatherEnabled = localStorage.getItem('hp_weather_enabled') !== 'false';
   let manualSceneIndex = localStorage.getItem('hp_manual_scene');
   let currentWeatherCode = 0;
   let currentTemp = '';
   let isDayTime = true;
-
-  const cards = Array.from(document.querySelectorAll('button.app-card'));
-  const hedwig = document.getElementById('hedwig');
 
   const ticksGroup = document.getElementById('clockTicks');
   for (let i = 0; i < 60; i++) {
@@ -332,7 +182,8 @@
     const scene = SCENES[idx];
 
     const wp = document.getElementById('wallpaper');
-    if (!wp.src.endsWith(scene.file)) wp.src = scene.file;
+    const fullAssetPath = `file:///android_asset/${scene.file}`;
+    if (wp.src !== fullAssetPath) wp.src = fullAssetPath;
     document.getElementById('sceneTitle').textContent = scene.title;
 
     const tint = document.getElementById('dayNightTint');
@@ -453,85 +304,6 @@
   }
   renderWeatherLoop();
 
-  function flyHedwigToButton(btn, animateFlight = true) {
-    cards.forEach(c => c.classList.toggle('selected', c === btn));
-    const rect = btn.getBoundingClientRect();
-    const targetX = rect.left + (rect.width / 2) - 54;
-    const targetY = rect.top - 78;
-
-    if (animateFlight) {
-      hedwig.classList.remove('perched');
-      hedwig.classList.add('flying');
-      clearTimeout(flyTimeout);
-      flyTimeout = setTimeout(() => {
-        hedwig.classList.remove('flying');
-        hedwig.classList.add('perched');
-      }, 620);
-    }
-
-    hedwig.style.left = `${targetX}px`;
-    hedwig.style.top = `${targetY}px`;
-  }
-
-  cards.forEach(btn => {
-    btn.addEventListener('focus', () => flyHedwigToButton(btn, true));
-    btn.addEventListener('click', () => {
-      const pkg = btn.getAttribute('data-pkg');
-      if (window.AndroidBridge) window.AndroidBridge.launchApp(pkg);
-    });
-  });
-
-  function updateSettingsLabels() {
-    document.getElementById('valWeather').textContent = weatherEnabled ? 'ON' : 'OFF';
-    const idx = manualSceneIndex !== null ? parseInt(manualSceneIndex, 10) % SCENES.length : null;
-    document.getElementById('valWallpaper').textContent = idx !== null ? SCENES[idx].title : 'Auto (Daily)';
-  }
-
-  document.getElementById('settingsBtn').addEventListener('click', () => {
-    updateSettingsLabels();
-    document.getElementById('settingsModal').style.display = 'flex';
-    document.getElementById('optWeather').focus();
-  });
-
-  document.getElementById('optWeather').addEventListener('click', () => {
-    weatherEnabled = !weatherEnabled;
-    localStorage.setItem('hp_weather_enabled', weatherEnabled);
-    updateSettingsLabels();
-    applyWallpaperAndAtmosphere();
-    if (weatherEnabled) fetchWeather();
-  });
-
-  document.getElementById('optWallpaper').addEventListener('click', () => {
-    const next = manualSceneIndex === null ? 1 : (parseInt(manualSceneIndex, 10) + 1) % SCENES.length;
-    manualSceneIndex = String(next);
-    localStorage.setItem('hp_manual_scene', manualSceneIndex);
-    updateSettingsLabels();
-    applyWallpaperAndAtmosphere();
-  });
-
-  document.getElementById('optClearPad').addEventListener('click', () => {
-    if (window.AndroidBridge) window.AndroidBridge.clearPadState();
-    document.getElementById('parchmentText').textContent = 'Mischief managed.';
-    document.getElementById('parchmentImg').style.display = 'none';
-  });
-
-  document.getElementById('optSysSettings').addEventListener('click', () => {
-    if (window.AndroidBridge) window.AndroidBridge.openSystemSettings();
-  });
-
-  document.getElementById('optCloseModal').addEventListener('click', () => {
-    document.getElementById('settingsModal').style.display = 'none';
-    cards[0].focus();
-  });
-
-  window.handleBackKey = function() {
-    const modal = document.getElementById('settingsModal');
-    if (modal.style.display === 'flex') {
-      modal.style.display = 'none';
-      cards[0].focus();
-    }
-  };
-
   let lastPadUpdated = 0;
   function pollPhoneParchment() {
     if (!window.AndroidBridge) return;
@@ -564,10 +336,6 @@
       const ip = window.AndroidBridge.getLocalIpAddress();
       document.getElementById('padUrlHint').textContent = `Phone Pad: http://${ip}:8080`;
     }
-    setTimeout(() => {
-      cards[0].focus();
-      flyHedwigToButton(cards[0], false);
-    }, 200);
   });
 </script>
 </body>
