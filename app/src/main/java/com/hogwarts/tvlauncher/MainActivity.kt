@@ -1,18 +1,26 @@
 package com.hogwarts.tvlauncher
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.Settings
-import android.view.KeyEvent
+import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.OvershootInterpolator
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import fi.iki.elonen.NanoHTTPD
@@ -22,129 +30,288 @@ import java.net.NetworkInterface
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
-    private lateinit var remoteCatcher: View
+    private lateinit var hedwigView: TextView
+    private val appCards = mutableListOf<LinearLayout>()
     private var padServer: PadMirrorServer? = null
 
     @Volatile
     var latestPadJson: String = """{"text":"","image":"","updated":0}"""
 
+    private val apps = listOf(
+        Triple("NETFLIX", "Netflix", "com.netflix.ninja") to "#E50914",
+        Triple("▶ YouTube", "YouTube", "com.google.android.youtube.tv") to "#FF2A2A",
+        Triple("FANCODE", "FanCode", "com.fancode.tv") to "#FF6B00",
+        Triple("JioHotstar", "JioHotstar", "in.startv.hotstar") to "#38BDF8"
+    )
+
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val root = FrameLayout(this)
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(Color.parseColor("#0a0b10"))
+        }
 
+        // 1. Non-interactive WebView Layer (Wallpapers, Clock, Weather, Marauder's Parchment)
         webView = WebView(this).apply {
             isFocusable = false
             isFocusableInTouchMode = false
+            isClickable = false
+            descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+            settings.apply {
+                javaScriptEnabled = true
+                domStorageEnabled = true
+                allowFileAccess = true
+                allowUniversalAccessFromFileURLs = true
+                cacheMode = WebSettings.LOAD_DEFAULT
+                mediaPlaybackRequiresUserGesture = false
+            }
+            webChromeClient = WebChromeClient()
+            webViewClient = WebViewClient()
+            addJavascriptInterface(TvBridge(), "AndroidBridge")
+        }
+        root.addView(webView, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ))
+
+        // 2. Native Android TV D-Pad Dock Layer (Guaranteed Sony Bravia Focus)
+        val dockContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            setPadding(dp(28), dp(14), dp(28), dp(14))
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#B80C0A08"))
+                cornerRadius = dp(28).toFloat()
+                setStroke(dp(1), Color.parseColor("#66DAB260"))
+            }
         }
 
-        // Transparent native Android TV view that permanently holds D-pad focus
-        remoteCatcher = object : View(this) {
-            override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-                return handleTvKey(keyCode) || super.onKeyDown(keyCode, event)
+        appCards.clear()
+        apps.forEachIndexed { index, (info, brandHex) ->
+            val (badgeText, labelText, pkg) = info
+            val card = createNativeAppCard(badgeText, labelText, brandHex, pkg, index)
+            appCards.add(card)
+            val lp = LinearLayout.LayoutParams(dp(168), dp(104)).apply {
+                if (index > 0) marginStart = dp(28)
             }
-        }.apply {
+            dockContainer.addView(card, lp)
+        }
+
+        val dockParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        ).apply {
+            bottomMargin = dp(46)
+        }
+        root.addView(dockContainer, dockParams)
+
+        // 3. Native Enchantments Button (Bottom-Right)
+        val settingsBtn = TextView(this).apply {
+            text = "✦ Enchantments"
+            setTextColor(Color.parseColor("#E5BE6B"))
+            textSize = 14f
+            typeface = Typeface.SERIF
+            setPadding(dp(18), dp(10), dp(18), dp(10))
             isFocusable = true
             isFocusableInTouchMode = true
-            setOnKeyListener { _, keyCode, event ->
-                if (event.action == KeyEvent.ACTION_DOWN) {
-                    handleTvKey(keyCode)
-                } else {
-                    false
-                }
+            background = makeCardBg(false)
+            setOnFocusChangeListener { v, hasFocus ->
+                v.background = makeCardBg(hasFocus)
+                v.animate().scaleX(if (hasFocus) 1.08f else 1f)
+                    .scaleY(if (hasFocus) 1.08f else 1f).setDuration(200).start()
             }
+            setOnClickListener { showEnchantmentDialog() }
         }
+        val settingsParams = FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            Gravity.BOTTOM or Gravity.END
+        ).apply {
+            bottomMargin = dp(24)
+            marginEnd = dp(30)
+        }
+        root.addView(settingsBtn, settingsParams)
 
-        root.addView(
-            webView,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
-        root.addView(
-            remoteCatcher,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        )
+        // 4. Native Animated Hedwig Owl Overlay
+        hedwigView = TextView(this).apply {
+            text = "🦉"
+            textSize = 42f
+            elevation = dp(16).toFloat()
+            isFocusable = false
+        }
+        root.addView(hedwigView, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
 
         setContentView(root)
-        remoteCatcher.requestFocus()
-
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            allowFileAccess = true
-            allowUniversalAccessFromFileURLs = true
-            cacheMode = WebSettings.LOAD_DEFAULT
-            mediaPlaybackRequiresUserGesture = false
-        }
-
-        webView.webChromeClient = WebChromeClient()
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView?, url: String?) {
-                super.onPageFinished(view, url)
-                remoteCatcher.requestFocus()
-            }
-        }
-        webView.addJavascriptInterface(TvBridge(), "AndroidBridge")
-
         startLocalPadServer()
         webView.loadUrl("file:///android_asset/index.html")
-    }
 
-    override fun onResume() {
-        super.onResume()
-        if (::remoteCatcher.isInitialized) {
-            remoteCatcher.requestFocus()
+        // Give initial focus to Netflix and perch Hedwig above it
+        appCards.firstOrNull()?.post {
+            appCards[0].requestFocus()
+            flyHedwigTo(appCards[0], animate = false)
         }
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
-        if (hasFocus && ::remoteCatcher.isInitialized) {
-            remoteCatcher.requestFocus()
-        }
-    }
+    private fun createNativeAppCard(
+        badgeText: String,
+        labelText: String,
+        brandHex: String,
+        packageName: String,
+        index: Int
+    ): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            isFocusable = true
+            isFocusableInTouchMode = true
+            background = makeCardBg(index == 0)
 
-    private fun handleTvKey(keyCode: Int): Boolean {
-        val action = when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_LEFT -> "LEFT"
-            KeyEvent.KEYCODE_DPAD_RIGHT -> "RIGHT"
-            KeyEvent.KEYCODE_DPAD_UP -> "UP"
-            KeyEvent.KEYCODE_DPAD_DOWN -> "DOWN"
-            KeyEvent.KEYCODE_DPAD_CENTER,
-            KeyEvent.KEYCODE_ENTER,
-            KeyEvent.KEYCODE_NUMPAD_ENTER -> "ENTER"
-            KeyEvent.KEYCODE_MENU,
-            KeyEvent.KEYCODE_INFO -> "MENU"
-            KeyEvent.KEYCODE_BACK -> {
-                runOnUiThread {
-                    webView.evaluateJavascript("if(window.handleBackKey){window.handleBackKey();}", null)
-                }
-                return true
+            val badge = TextView(this@MainActivity).apply {
+                text = badgeText
+                setTextColor(Color.parseColor(brandHex))
+                textSize = 21f
+                typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
+                gravity = Gravity.CENTER
             }
-            else -> return false
+            val label = TextView(this@MainActivity).apply {
+                text = labelText
+                setTextColor(Color.parseColor("#DFCBA3"))
+                textSize = 13f
+                typeface = Typeface.SERIF
+                gravity = Gravity.CENTER
+                setPadding(0, dp(4), 0, 0)
+            }
+            addView(badge)
+            addView(label)
+
+            setOnFocusChangeListener { v, hasFocus ->
+                v.background = makeCardBg(hasFocus)
+                v.animate()
+                    .translationY(if (hasFocus) -dp(12).toFloat() else 0f)
+                    .scaleX(if (hasFocus) 1.09f else 1f)
+                    .scaleY(if (hasFocus) 1.09f else 1f)
+                    .setDuration(260)
+                    .setInterpolator(OvershootInterpolator(1.2f))
+                    .start()
+                if (hasFocus) {
+                    flyHedwigTo(v, animate = true)
+                }
+            }
+
+            setOnClickListener {
+                launchTvApp(packageName)
+            }
         }
-        sendKeyToJs(action)
-        return true
     }
 
-    private fun sendKeyToJs(action: String) {
-        runOnUiThread {
-            webView.evaluateJavascript("if(window.onRemoteKey){window.onRemoteKey('$action');}", null)
+    private fun makeCardBg(focused: Boolean): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(Color.parseColor(if (focused) "#F22E2315" else "#D91A1510"))
+            cornerRadius = dp(18).toFloat()
+            setStroke(
+                dp(if (focused) 3 else 1),
+                Color.parseColor(if (focused) "#FFD670" else "#59B9924A")
+            )
         }
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && handleTvKey(event.keyCode)) {
-            return true
+    private fun flyHedwigTo(target: View, animate: Boolean) {
+        val loc = IntArray(2)
+        target.getLocationInWindow(loc)
+        val targetX = loc[0] + (target.width / 2f) - (hedwigView.width / 2f)
+        val targetY = loc[1] - hedwigView.height + dp(8).toFloat()
+
+        if (!animate) {
+            hedwigView.x = targetX
+            hedwigView.y = targetY
+            return
         }
-        return super.dispatchKeyEvent(event)
+
+        // Arc flight animation with wing-flap tilt
+        hedwigView.animate()
+            .x(targetX)
+            .y(targetY - dp(22))
+            .rotation(if (targetX > hedwigView.x) 14f else -14f)
+            .scaleX(1.18f)
+            .scaleY(1.18f)
+            .setDuration(280)
+            .withEndAction {
+                hedwigView.animate()
+                    .y(targetY)
+                    .rotation(0f)
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(220)
+                    .setInterpolator(OvershootInterpolator(1.4f))
+                    .start()
+            }
+            .start()
     }
+
+    private fun showEnchantmentDialog() {
+        val prefs = getSharedPreferences("hogwarts_prefs", Context.MODE_PRIVATE)
+        val options = arrayOf(
+            "Toggle Live Weather & Day/Night Cycle",
+            "Cycle Wizarding Background Scene",
+            "Clear Marauder's Corner Note",
+            "Open Sony Android TV Settings"
+        )
+        AlertDialog.Builder(this)
+            .setTitle("✦ Hogwarts Enchantments ✦")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> {
+                        val next = !prefs.getBoolean("weather_on", true)
+                        prefs.edit().putBoolean("weather_on", next).apply()
+                        webView.evaluateJavascript(
+                            "localStorage.setItem('hp_weather_enabled', '$next'); weatherEnabled = $next; applyWallpaperAndAtmosphere(); if($next) fetchWeather();",
+                            null
+                        )
+                    }
+                    1 -> {
+                        val nextScene = (prefs.getInt("scene_idx", 0) + 1) % 7
+                        prefs.edit().putInt("scene_idx", nextScene).apply()
+                        webView.evaluateJavascript(
+                            "localStorage.setItem('hp_manual_scene', '$nextScene'); manualSceneIndex = '$nextScene'; applyWallpaperAndAtmosphere();",
+                            null
+                        )
+                    }
+                    2 -> {
+                        latestPadJson = """{"text":"","image":"","updated":${System.currentTimeMillis()}}"""
+                        webView.evaluateJavascript(
+                            "document.getElementById('parchmentText').textContent='Mischief managed.'; document.getElementById('parchmentImg').style.display='none';",
+                            null
+                        )
+                    }
+                    3 -> {
+                        startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+            }
+            .show()
+    }
+
+    private fun launchTvApp(packageName: String) {
+        try {
+            val leanbackIntent = packageManager.getLeanbackLaunchIntentForPackage(packageName)
+            val launchIntent = leanbackIntent ?: packageManager.getLaunchIntentForPackage(packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(launchIntent)
+            } else {
+                Toast.makeText(this, "App not installed: $packageName", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(this, "Could not launch app", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
     private fun startLocalPadServer() {
         try {
@@ -163,28 +330,11 @@ class MainActivity : AppCompatActivity() {
 
     inner class TvBridge {
         @JavascriptInterface
-        fun launchApp(packageName: String) {
-            runOnUiThread {
-                try {
-                    val leanbackIntent = packageManager.getLeanbackLaunchIntentForPackage(packageName)
-                    val launchIntent = leanbackIntent ?: packageManager.getLaunchIntentForPackage(packageName)
-                    if (launchIntent != null) {
-                        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(launchIntent)
-                    } else {
-                        Toast.makeText(this@MainActivity, "App not installed: $packageName", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(this@MainActivity, "Could not launch app", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
+        fun launchApp(packageName: String) = runOnUiThread { launchTvApp(packageName) }
 
         @JavascriptInterface
-        fun openSystemSettings() {
-            runOnUiThread {
-                startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            }
+        fun openSystemSettings() = runOnUiThread {
+            startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
 
         @JavascriptInterface
