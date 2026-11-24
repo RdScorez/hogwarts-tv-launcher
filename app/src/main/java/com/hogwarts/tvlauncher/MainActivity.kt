@@ -52,8 +52,9 @@ class MainActivity : AppCompatActivity() {
             setBackgroundColor(Color.parseColor("#0a0b10"))
         }
 
-        // 1. Non-interactive WebView Layer (Wallpapers, Clock, Weather, Marauder's Parchment)
+        // 1. Full-Screen Hogwarts Scene, Clock, Weather & Parchment Layer
         webView = WebView(this).apply {
+            setBackgroundColor(Color.TRANSPARENT)
             isFocusable = false
             isFocusableInTouchMode = false
             isClickable = false
@@ -62,6 +63,8 @@ class MainActivity : AppCompatActivity() {
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 allowFileAccess = true
+                allowContentAccess = true
+                allowFileAccessFromFileURLs = true
                 allowUniversalAccessFromFileURLs = true
                 cacheMode = WebSettings.LOAD_DEFAULT
                 mediaPlaybackRequiresUserGesture = false
@@ -75,14 +78,14 @@ class MainActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.MATCH_PARENT
         ))
 
-        // 2. Native Android TV D-Pad Dock Layer (Guaranteed Sony Bravia Focus)
+        // 2. Compact, Sleek Native App Dock
         val dockContainer = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(28), dp(14), dp(28), dp(14))
+            setPadding(dp(18), dp(10), dp(18), dp(10))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#B80C0A08"))
-                cornerRadius = dp(28).toFloat()
+                setColor(Color.parseColor("#A60C0A08"))
+                cornerRadius = dp(20).toFloat()
                 setStroke(dp(1), Color.parseColor("#66DAB260"))
             }
         }
@@ -92,8 +95,8 @@ class MainActivity : AppCompatActivity() {
             val (badgeText, labelText, pkg) = info
             val card = createNativeAppCard(badgeText, labelText, brandHex, pkg, index)
             appCards.add(card)
-            val lp = LinearLayout.LayoutParams(dp(168), dp(104)).apply {
-                if (index > 0) marginStart = dp(28)
+            val lp = LinearLayout.LayoutParams(dp(116), dp(70)).apply {
+                if (index > 0) marginStart = dp(18)
             }
             dockContainer.addView(card, lp)
         }
@@ -103,17 +106,17 @@ class MainActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
         ).apply {
-            bottomMargin = dp(46)
+            bottomMargin = dp(28)
         }
         root.addView(dockContainer, dockParams)
 
-        // 3. Native Enchantments Button (Bottom-Right)
+        // 3. Compact Enchantments Button (Bottom-Right)
         val settingsBtn = TextView(this).apply {
             text = "✦ Enchantments"
             setTextColor(Color.parseColor("#E5BE6B"))
-            textSize = 14f
+            textSize = 11f
             typeface = Typeface.SERIF
-            setPadding(dp(18), dp(10), dp(18), dp(10))
+            setPadding(dp(12), dp(7), dp(12), dp(7))
             isFocusable = true
             isFocusableInTouchMode = true
             background = makeCardBg(false)
@@ -129,15 +132,15 @@ class MainActivity : AppCompatActivity() {
             ViewGroup.LayoutParams.WRAP_CONTENT,
             Gravity.BOTTOM or Gravity.END
         ).apply {
-            bottomMargin = dp(24)
-            marginEnd = dp(30)
+            bottomMargin = dp(18)
+            marginEnd = dp(22)
         }
         root.addView(settingsBtn, settingsParams)
 
-        // 4. Native Animated Hedwig Owl Overlay
+        // 4. Compact Animated Hedwig Owl Overlay
         hedwigView = TextView(this).apply {
             text = "🦉"
-            textSize = 42f
+            textSize = 28f
             elevation = dp(16).toFloat()
             isFocusable = false
         }
@@ -150,7 +153,6 @@ class MainActivity : AppCompatActivity() {
         startLocalPadServer()
         webView.loadUrl("file:///android_asset/index.html")
 
-        // Give initial focus to Netflix and perch Hedwig above it
         appCards.firstOrNull()?.post {
             appCards[0].requestFocus()
             flyHedwigTo(appCards[0], animate = false)
@@ -174,17 +176,17 @@ class MainActivity : AppCompatActivity() {
             val badge = TextView(this@MainActivity).apply {
                 text = badgeText
                 setTextColor(Color.parseColor(brandHex))
-                textSize = 21f
+                textSize = 15f
                 typeface = Typeface.create("sans-serif-black", Typeface.BOLD)
                 gravity = Gravity.CENTER
             }
             val label = TextView(this@MainActivity).apply {
                 text = labelText
                 setTextColor(Color.parseColor("#DFCBA3"))
-                textSize = 13f
+                textSize = 10f
                 typeface = Typeface.SERIF
                 gravity = Gravity.CENTER
-                setPadding(0, dp(4), 0, 0)
+                setPadding(0, dp(2), 0, 0)
             }
             addView(badge)
             addView(label)
@@ -192,10 +194,10 @@ class MainActivity : AppCompatActivity() {
             setOnFocusChangeListener { v, hasFocus ->
                 v.background = makeCardBg(hasFocus)
                 v.animate()
-                    .translationY(if (hasFocus) -dp(12).toFloat() else 0f)
-                    .scaleX(if (hasFocus) 1.09f else 1f)
-                    .scaleY(if (hasFocus) 1.09f else 1f)
-                    .setDuration(260)
+                    .translationY(if (hasFocus) -dp(8).toFloat() else 0f)
+                    .scaleX(if (hasFocus) 1.08f else 1f)
+                    .scaleY(if (hasFocus) 1.08f else 1f)
+                    .setDuration(240)
                     .setInterpolator(OvershootInterpolator(1.2f))
                     .start()
                 if (hasFocus) {
@@ -211,10 +213,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun makeCardBg(focused: Boolean): GradientDrawable {
         return GradientDrawable().apply {
-            setColor(Color.parseColor(if (focused) "#F22E2315" else "#D91A1510"))
-            cornerRadius = dp(18).toFloat()
+            setColor(Color.parseColor(if (focused) "#EB2E2315" else "#CC1A1510"))
+            cornerRadius = dp(14).toFloat()
             setStroke(
-                dp(if (focused) 3 else 1),
+                dp(if (focused) 2 else 1),
                 Color.parseColor(if (focused) "#FFD670" else "#59B9924A")
             )
         }
@@ -224,7 +226,7 @@ class MainActivity : AppCompatActivity() {
         val loc = IntArray(2)
         target.getLocationInWindow(loc)
         val targetX = loc[0] + (target.width / 2f) - (hedwigView.width / 2f)
-        val targetY = loc[1] - hedwigView.height + dp(8).toFloat()
+        val targetY = loc[1] - hedwigView.height + dp(6).toFloat()
 
         if (!animate) {
             hedwigView.x = targetX
@@ -232,21 +234,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // Arc flight animation with wing-flap tilt
         hedwigView.animate()
             .x(targetX)
-            .y(targetY - dp(22))
+            .y(targetY - dp(16))
             .rotation(if (targetX > hedwigView.x) 14f else -14f)
-            .scaleX(1.18f)
-            .scaleY(1.18f)
-            .setDuration(280)
+            .scaleX(1.16f)
+            .scaleY(1.16f)
+            .setDuration(260)
             .withEndAction {
                 hedwigView.animate()
                     .y(targetY)
                     .rotation(0f)
                     .scaleX(1f)
                     .scaleY(1f)
-                    .setDuration(220)
+                    .setDuration(200)
                     .setInterpolator(OvershootInterpolator(1.4f))
                     .start()
             }
@@ -449,50 +450,4 @@ class MainActivity : AppCompatActivity() {
     };
   }
 
-  function start(e) { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }
-  function move(e) {
-    if (!drawing) return;
-    e.preventDefault();
-    const p = getPos(e);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    scheduleSync();
-  }
-  function end() { if (drawing) { drawing = false; scheduleSync(); } }
-
-  canvas.addEventListener('touchstart', start, {passive:false});
-  canvas.addEventListener('touchmove', move, {passive:false});
-  canvas.addEventListener('touchend', end);
-  canvas.addEventListener('mousedown', start);
-  canvas.addEventListener('mousemove', move);
-  window.addEventListener('mouseup', end);
-
-  noteEl.addEventListener('input', scheduleSync);
-
-  function scheduleSync() {
-    clearTimeout(syncTimer);
-    syncTimer = setTimeout(sendNow, 250);
-  }
-
-  function clearAll() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    noteEl.value = '';
-    sendNow();
-  }
-
-  function sendNow() {
-    const payload = JSON.stringify({
-      text: noteEl.value,
-      image: canvas.toDataURL('image/png'),
-      updated: Date.now()
-    });
-    fetch('/api/update', { method: 'POST', body: payload })
-      .then(() => { document.getElementById('status').textContent = 'Synced to TV at ' + new Date().toLocaleTimeString(); })
-      .catch(() => { document.getElementById('status').textContent = 'Sync error — check TV Wi-Fi'; });
-  }
-</script>
-</body>
-</html>
-""".trimIndent()
-    }
-}
+  function start(e) { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.
