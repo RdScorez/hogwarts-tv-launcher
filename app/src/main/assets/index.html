@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Hogwarts TV Launcher</title>
+<style>
+  * { box-sizing: border-box; user-select: none; }
+  html, body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+    background: #0a0b10; font-family: 'Georgia', 'Times New Roman', serif; color: #f6e7c1;
+  }
+
+  /* Background & Day/Night Lighting Layers */
+  #wallpaper {
+    position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover;
+    transition: opacity 1.2s ease, filter 1.5s ease; z-index: 1;
+  }
+  #dayNightTint {
+    position: fixed; inset: 0; pointer-events: none; z-index: 2;
+    transition: background 2s ease;
+  }
+  #weatherCanvas {
+    position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3;
+  }
+  #vignette {
+    position: fixed; inset: 0; pointer-events: none; z-index: 4;
+    background: radial-gradient(circle at center, rgba(0,0,0,0.08) 35%, rgba(4,4,10,0.78) 100%);
+  }
+
+  /* Top Left: Ornate Hogwarts Manual Analog Clock */
+  #clockContainer {
+    position: fixed; top: 36px; left: 46px; z-index: 10;
+    display: flex; align-items: center; gap: 22px;
+    background: rgba(14, 11, 8, 0.58); border: 1.5px solid rgba(218, 178, 96, 0.55);
+    border-radius: 24px; padding: 16px 26px 16px 18px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.65), inset 0 0 24px rgba(218, 178, 96, 0.14);
+    backdrop-filter: blur(6px);
+  }
+  #hogwartsClock { width: 170px; height: 170px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8)); }
+  .clock-meta { display: flex; flex-direction: column; gap: 6px; }
+  .clock-location {
+    font-size: 15px; letter-spacing: 2px; text-transform: uppercase;
+    color: #e5be6b; text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+  }
+  .clock-date {
+    font-size: 22px; font-weight: bold; color: #fff4d6;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+  }
+  .clock-weather {
+    font-size: 15px; color: #d6c39c; display: flex; align-items: center; gap: 8px;
+  }
+
+  /* Top Right: Marauder's Corner Parchment Mirror */
+  #parchmentWidget {
+    position: fixed; top: 36px; right: 46px; width: 340px; min-height: 210px; z-index: 10;
+    background: linear-gradient(145deg, rgba(244, 228, 188, 0.92), rgba(222, 196, 142, 0.90));
+    color: #2c190a; border: 2px solid #8c6229; border-radius: 14px; padding: 14px 16px;
+    box-shadow: 0 14px 36px rgba(0,0,0,0.72), inset 0 0 28px rgba(139, 90, 29, 0.35);
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .parchment-header {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 1px dashed rgba(92, 56, 18, 0.45); padding-bottom: 6px; margin-bottom: 8px;
+    font-size: 13px; font-weight: bold; letter-spacing: 1px; color: #5c3610;
+  }
+  #parchmentText {
+    font-size: 17px; line-height: 1.35; font-style: italic; color: #261407;
+    white-space: pre-wrap; word-break: break-word; max-height: 75px; overflow: hidden;
+  }
+  #parchmentImg {
+    width: 100%; height: 130px; object-fit: contain; display: none; margin-top: 4px;
+  }
+  .parchment-footer {
+    margin-top: 8px; padding-top: 5px; border-top: 1px dashed rgba(92, 56, 18, 0.35);
+    font-size: 11px; color: #694118; text-align: right;
+  }
+
+  /* Bottom Dock: Only Netflix, YouTube, FanCode & JioHotstar */
+  #dockWrapper {
+    position: fixed; bottom: 54px; left: 0; right: 0; z-index: 15;
+    display: flex; justify-content: center; align-items: flex-end;
+  }
+  #appRow {
+    display: flex; gap: 46px; align-items: center; position: relative;
+    padding: 18px 42px; border-radius: 32px;
+    background: rgba(12, 10, 8, 0.52); border: 1px solid rgba(218, 178, 96, 0.35);
+    backdrop-filter: blur(8px); box-shadow: 0 16px 40px rgba(0,0,0,0.75);
+  }
+  .app-card {
+    width: 178px; height: 116px; border-radius: 20px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+    background: rgba(26, 21, 16, 0.85); border: 2px solid rgba(185, 146, 74, 0.35);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s, box-shadow 0.3s;
+    position: relative;
+  }
+  .app-card.selected {
+    transform: translateY(-14px) scale(1.1);
+    border-color: #ffd670;
+    box-shadow: 0 14px 32px rgba(255, 204, 92, 0.42), inset 0 0 18px rgba(255, 214, 112, 0.25);
+    background: rgba(42, 32, 20, 0.95);
+  }
+  .app-badge {
+    font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: 'Trebuchet MS', sans-serif;
+  }
+  .app-label { font-size: 13px; color: #dfcba3; letter-spacing: 0.8px; }
+
+  /* Animated Flying & Perching Hedwig */
+  #hedwig {
+    position: fixed; width: 108px; height: 96px; z-index: 30; pointer-events: none;
+    transition: left 0.58s cubic-bezier(0.25, 0.9, 0.3, 1.05), top 0.58s cubic-bezier(0.25, 0.9, 0.3, 1.05);
+    filter: drop-shadow(0 8px 14px rgba(0,0,0,0.85));
+  }
+  #hedwig.flying { animation: owlBob 0.32s ease-in-out infinite alternate; }
+  #hedwig .wing-left, #hedwig .wing-right { transform-origin: 50% 48%; transition: transform 0.25s ease; }
+  #hedwig.flying .wing-left { animation: flapLeft 0.24s ease-in-out infinite alternate; }
+  #hedwig.flying .wing-right { animation: flapRight 0.24s ease-in-out infinite alternate; }
+  #hedwig.perched .wing-left { transform: scaleX(0.22) rotate(12deg); }
+  #hedwig.perched .wing-right { transform: scaleX(0.22) rotate(-12deg); }
+
+  @keyframes flapLeft { from { transform: rotate(-28deg) scaleY(1.05); } to { transform: rotate(34deg) scaleY(0.75); } }
+  @keyframes flapRight { from { transform: rotate(28deg) scaleY(1.05); } to { transform: rotate(-34deg) scaleY(0.75); } }
+  @keyframes owlBob { from { transform: translateY(-14px) scale(1.08); } to { transform: translateY(-2px) scale(1.02); } }
+
+  /* Subtle Bottom Hint & Quick Enchantment Drawer */
+  #bottomHint {
+    position: fixed; bottom: 14px; left: 0; right: 0; text-align: center;
+    font-size: 13px; color: rgba(235, 216, 178, 0.65); z-index: 12; letter-spacing: 0.6px;
+  }
+  #settingsModal {
+    position: fixed; inset: 0; background: rgba(6, 5, 10, 0.82); z-index: 50;
+    display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px);
+  }
+  .modal-box {
+    width: 520px; background: #1c150e; border: 2px solid #c99b42; border-radius: 20px;
+    padding: 26px 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+  }
+  .modal-box h3 { margin: 0 0 18px; color: #ffd778; text-align: center; font-size: 22px; }
+  .setting-item {
+    padding: 13px 16px; margin-bottom: 10px; border-radius: 12px;
+    background: #2b2015; border: 1.5px solid #5c4321;
+    display: flex; justify-content: space-between; align-items: center; font-size: 16px;
+  }
+  .setting-item.active { border-color: #ffd778; background: #3d2d1c; box-shadow: 0 0 16px rgba(255,215,120,0.25); }
+</style>
+</head>
+<body>
+
+  <img id="wallpaper" src="bg_1.png" alt="Hogwarts Scene" />
+  <div id="dayNightTint"></div>
+  <canvas id="weatherCanvas"></canvas>
+  <div id="vignette"></div>
+
+  <!-- Top-Left: Manual Hogwarts Analog Clock -->
+  <div id="clockContainer">
+    <svg id="hogwartsClock" viewBox="0 0 200 200">
+      <defs>
+        <radialGradient id="dialGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#2a1f14" />
+          <stop offset="82%" stop-color="#140e09" />
+          <stop offset="100%" stop-color="#090604" />
+        </radialGradient>
+      </defs>
+      <circle cx="100" cy="100" r="95" fill="url(#dialGrad)" stroke="#d8ab4e" stroke-width="4" />
+      <circle cx="100" cy="100" r="86" fill="none" stroke="#8a6626" stroke-width="1.2" stroke-dasharray="3 3" />
+      <g id="clockTicks"></g>
+      <!-- Roman Numerals -->
+      <text x="100" y="31" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">XII</text>
+      <text x="169" y="105" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">III</text>
+      <text x="100" y="179" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">VI</text>
+      <text x="31" y="105" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">IX</text>
+      <!-- Decorative Center Crest -->
+      <polygon points="100,82 105,95 118,100 105,105 100,118 95,105 82,100 95,95" fill="rgba(216,171,78,0.25)" />
+      <!-- Hands -->
+      <line id="hourHand" x1="100" y1="100" x2="100" y2="54" stroke="#f6d27a" stroke-width="5.5" stroke-linecap="round" />
+      <line id="minHand" x1="100" y1="100" x2="100" y2="34" stroke="#fff2cf" stroke-width="3.5" stroke-linecap="round" />
+      <line id="secHand" x1="100" y1="112" x2="100" y2="28" stroke="#c94a38" stroke-width="1.6" stroke-linecap="round" />
+      <circle cx="100" cy="100" r="5.5" fill="#ffd875" stroke="#3b260b" stroke-width="1.5" />
+    </svg>
+    <div class="clock-meta">
+      <div class="clock-location" id="sceneTitle">HOGWARTS CASTLE</div>
+      <div class="clock-date" id="dateText">Tuesday, Nov 24</div>
+      <div class="clock-weather" id="weatherStatus">Enchanted Sky • Loading...</div>
+    </div>
+  </div>
+
+  <!-- Top-Right: Live Phone-Mirrored Parchment Pad -->
+  <div id="parchmentWidget">
+    <div>
+      <div class="parchment-header">
+        <span>✦ MARAUDER'S NOTE</span>
+        <span id="padSyncBadge">LIVE</span>
+      </div>
+      <div id="parchmentText">I solemnly swear that I am up to no good...</div>
+      <img id="parchmentImg" alt="Sketch" />
+    </div>
+    <div class="parchment-footer" id="padUrlHint">Phone Pad: http://... :8080</div>
+  </div>
+
+  <!-- Flying & Perching Hedwig SVG -->
+  <div id="hedwig" class="perched">
+    <svg viewBox="0 0 140 120" width="108" height="96">
+      <!-- Left Wing -->
+      <path class="wing-left" d="M52,58 C24,36 4,46 6,66 C18,68 36,68 52,66 Z" fill="#f7f7f9" stroke="#cfd4dc" stroke-width="1.5"/>
+      <!-- Right Wing -->
+      <path class="wing-right" d="M88,58 C116,36 136,46 134,66 C122,68 104,68 88,66 Z" fill="#f7f7f9" stroke="#cfd4dc" stroke-width="1.5"/>
+      <!-- Tail Feathers -->
+      <polygon points="62,92 70,112 78,92" fill="#e6e9ef" />
+      <!-- Snowy Body -->
+      <ellipse cx="70" cy="68" rx="22" ry="28" fill="#ffffff" stroke="#d5dae2" stroke-width="1.5"/>
+      <!-- Subtle Snowy Owl Speckles -->
+      <path d="M58,64 Q61,67 64,64 M75,66 Q78,69 81,66 M61,76 Q64,79 67,76 M73,77 Q76,80 79,77 M67,84 Q70,87 73,84"
+            stroke="#6b7280" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+      <!-- Head -->
+      <circle cx="70" cy="38" r="17" fill="#ffffff" stroke="#d5dae2" stroke-width="1.5"/>
+      <!-- Facial Disc & Amber Eyes -->
+      <circle cx="63" cy="37" r="4.3" fill="#f59e0b" />
+      <circle cx="63" cy="37" r="2.1" fill="#111827" />
+      <circle cx="62" cy="36" r="0.8" fill="#ffffff" />
+      <circle cx="77" cy="37" r="4.3" fill="#f59e0b" />
+      <circle cx="77" cy="37" r="2.1" fill="#111827" />
+      <circle cx="76" cy="36" r="0.8" fill="#ffffff" />
+      <!-- Beak -->
+      <polygon points="67,41 73,41 70,47" fill="#374151" />
+      <!-- Talons -->
+      <path d="M61,95 L58,102 M63,95 L63,103 M77,95 L77,103 M79,95 L82,102" stroke="#d97706" stroke-width="2.2" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <!-- Bottom App Dock (Strictly 4 Apps) -->
+  <div id="dockWrapper">
+    <div id="appRow">
+      <div class="app-card selected" data-pkg="com.netflix.ninja">
+        <div class="app-badge" style="color:#E50914;">NETFLIX</div>
+        <div class="app-label">Netflix</div>
+      </div>
+      <div class="app-card" data-pkg="com.google.android.youtube.tv">
+        <div class="app-badge" style="color:#FF2A2A;">▶ YouTube</div>
+        <div class="app-label">YouTube</div>
+      </div>
+      <div class="app-card" data-pkg="com.fancode.tv">
+        <div class="app-badge" style="color:#FF6B00;">FANCODE</div>
+        <div class="app-label">FanCode</div>
+      </div>
+      <div class="app-card" data-pkg="in.startv.hotstar">
+        <div class="app-badge" style="color:#38BDF8;">JioHotstar</div>
+        <div class="app-label">JioHotstar</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bottomHint">◀ ▶ Move Hedwig • OK Open App • ▼ Enchantment Settings</div>
+
+  <!-- Enchantment Settings Drawer -->
+  <div id="settingsModal">
+    <div class="modal-box">
+      <h3>✦ Hogwarts Enchantment Settings ✦</h3>
+      <div class="setting-item active" id="optWeather">
+        <span>Live Weather & Day/Night Cycle</span>
+        <strong id="valWeather" style="color:#ffd778;">ON</strong>
+      </div>
+      <div class="setting-item" id="optWallpaper">
+        <span>Change Today's Wizarding Scene</span>
+        <strong id="valWallpaper" style="color:#ffd778;">Auto (Daily)</strong>
+      </div>
+      <div class="setting-item" id="optClearPad">
+        <span>Clear Marauder's Corner Note</span>
+        <strong style="color:#f87171;">Clear</strong>
+      </div>
+      <div class="setting-item" id="optSysSettings">
+        <span>Open Sony Android TV Settings</span>
+        <strong>Open →</strong>
+      </div>
+      <div style="text-align:center;font-size:13px;color:#bba378;margin-top:12px;">
+        Press ▲ / ▼ to choose • OK to toggle • Back to close
+      </div>
+    </div>
+  </div>
+
+<script>
+  const SCENES = [
+    { file: 'bg_1.png', title: 'HOGWARTS CASTLE' },
+    { file: 'bg_2.png', title: 'THE GREAT HALL' },
+    { file: 'bg_3.png', title: 'HOGSMEADE VILLAGE' },
+    { file: 'bg_4.png', title: 'DIAGON ALLEY' },
+    { file: 'bg_5.png', title: 'HOGWARTS EXPRESS' },
+    { file: 'bg_6.png', title: 'FORBIDDEN FOREST' },
+    { file: 'bg_7.png', title: 'GRYFFINDOR COMMON ROOM' }
+  ];
+
+  let selectedIndex = 0;
+  let menuOpen = false;
+  let menuIndex = 0;
+  let flyTimeout = null;
+
+  let weatherEnabled = localStorage.getItem('hp_weather_enabled') !== 'false';
+  let manualSceneIndex = localStorage.getItem('hp_manual_scene');
+  let currentWeatherCode = 0;
+  let currentTemp = '';
+  let isDayTime = true;
+
+  const cards = Array.from(document.querySelectorAll('.app-card'));
+  const hedwig = document.getElementById('hedwig');
+
+  const ticksGroup = document.getElementById('clockTicks');
+  for (let i = 0; i < 60; i++) {
+    const angle = (i * 6) * Math.PI / 180;
+    const r1 = i % 5 === 0 ? 78 : 82;
+    const r2 = 86;
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', 100 + r1 * Math.sin(angle));
+    line.setAttribute('y1', 100 - r1 * Math.cos(angle));
+    line.setAttribute('x2', 100 + r2 * Math.sin(angle));
+    line.setAttribute('y2', 100 - r2 * Math.cos(angle));
+    line.setAttribute('stroke', i % 5 === 0 ? '#f3cf7a' : '#7c5d24');
+    line.setAttribute('stroke-width', i % 5 === 0 ? '2' : '1');
+    ticksGroup.appendChild(line);
+  }
+
+  function updateClock() {
+    const now = new Date();
+    const sec = now.getSeconds() + now.getMilliseconds() / 1000;
+    const min = now.getMinutes() + sec / 60;
+    const hr = (now.getHours() % 12) + min / 60;
+
+    document.getElementById('hourHand').setAttribute('transform', `rotate(${hr * 30} 100 100)`);
+    document.getElementById('minHand').setAttribute('transform', `rotate(${min * 6} 100 100)`);
+    document.getElementById('secHand').setAttribute('transform', `rotate(${sec * 6} 100 100)`);
+
+    const opts = { weekday: 'long', month: 'short', day: 'numeric' };
+    document.getElementById('dateText').textContent = now.toLocaleDateString('en-US', opts);
+  }
+  setInterval(updateClock, 250);
+  updateClock();
+
+  function applyWallpaperAndAtmosphere() {
+    const now = new Date();
+    const dayOfYear = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+    const idx = manualSceneIndex !== null ? parseInt(manualSceneIndex, 10) % SCENES.length : dayOfYear % SCENES.length;
+    const scene = SCENES[idx];
+
+    const wp = document.getElementById('wallpaper');
+    if (!wp.src.endsWith(scene.file)) wp.src = scene.file;
+    document.getElementById('sceneTitle').textContent = scene.title;
+
+    const tint = document.getElementById('dayNightTint');
+    if (!weatherEnabled) {
+      wp.style.filter = 'brightness(1) saturate(1)';
+      tint.style.background = 'transparent';
+      document.getElementById('weatherStatus').textContent = 'Enchanted Atmosphere: Off';
+      return;
+    }
+
+    const h = now.getHours();
+    if (h >= 6 && h < 11) {
+      wp.style.filter = 'brightness(1.06) saturate(1.08) sepia(0.08)';
+      tint.style.background = 'linear-gradient(to bottom, rgba(255, 210, 135, 0.14), rgba(0,0,0,0.1))';
+    } else if (h >= 11 && h < 17) {
+      wp.style.filter = 'brightness(1.12) saturate(1.05)';
+      tint.style.background = 'rgba(255, 245, 220, 0.05)';
+    } else if (h >= 17 && h < 20) {
+      wp.style.filter = 'brightness(0.96) saturate(1.18)';
+      tint.style.background = 'linear-gradient(to bottom, rgba(224, 102, 54, 0.22), rgba(20, 14, 42, 0.28))';
+    } else {
+      wp.style.filter = 'brightness(0.76) contrast(1.08) saturate(0.95)';
+      tint.style.background = 'linear-gradient(to bottom, rgba(10, 18, 48, 0.42), rgba(5, 7, 18, 0.45))';
+    }
+  }
+
+  async function fetchWeather() {
+    if (!weatherEnabled) return;
+    try {
+      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=30.3165&longitude=78.0322&current=temperature_2m,weather_code,is_day');
+      const data = await res.json();
+      currentTemp = Math.round(data.current.temperature_2m) + '°C';
+      currentWeatherCode = data.current.weather_code;
+      isDayTime = data.current.is_day === 1;
+      document.getElementById('weatherStatus').textContent = `${describeWeather(currentWeatherCode)} • ${currentTemp}`;
+    } catch (e) {
+      document.getElementById('weatherStatus').textContent = 'Enchanted Sky • Active';
+    }
+  }
+
+  function describeWeather(code) {
+    if (code === 0) return isDayTime ? 'Clear Sky' : 'Starlit Night';
+    if (code <= 3) return 'Partly Cloudy';
+    if (code <= 48) return 'Highland Mist';
+    if (code <= 67 || (code >= 80 && code <= 82)) return 'Rainy Spell';
+    if (code <= 77) return 'Snowfall';
+    if (code >= 95) return 'Thunderstorm';
+    return 'Enchanted Breeze';
+  }
+
+  const wCanvas = document.getElementById('weatherCanvas');
+  const wCtx = wCanvas.getContext('2d');
+  let particles = [];
+  let lightningAlpha = 0;
+
+  function resizeWeather() {
+    wCanvas.width = window.innerWidth;
+    wCanvas.height = window.innerHeight;
+    particles = Array.from({ length: 85 }, () => ({
+      x: Math.random() * wCanvas.width,
+      y: Math.random() * wCanvas.height,
+      speed: 1.5 + Math.random() * 4.5,
+      size: 1 + Math.random() * 2.5,
+      drift: (Math.random() - 0.5) * 1.2
+    }));
+  }
+  window.addEventListener('resize', resizeWeather);
+  resizeWeather();
+
+  function renderWeatherLoop() {
+    wCtx.clearRect(0, 0, wCanvas.width, wCanvas.height);
+    if (weatherEnabled) {
+      const isRain = (currentWeatherCode >= 51 && currentWeatherCode <= 67) || (currentWeatherCode >= 80 && currentWeatherCode <= 99);
+      const isSnow = (currentWeatherCode >= 71 && currentWeatherCode <= 77);
+      const isThunder = currentWeatherCode >= 95;
+
+      if (isThunder && Math.random() < 0.004) lightningAlpha = 0.45;
+      if (lightningAlpha > 0) {
+        wCtx.fillStyle = `rgba(220, 235, 255, ${lightningAlpha})`;
+        wCtx.fillRect(0, 0, wCanvas.width, wCanvas.height);
+        lightningAlpha *= 0.86;
+      }
+
+      particles.forEach(p => {
+        if (isRain) {
+          wCtx.strokeStyle = 'rgba(185, 215, 255, 0.35)';
+          wCtx.lineWidth = 1.2;
+          wCtx.beginPath();
+          wCtx.moveTo(p.x, p.y);
+          wCtx.lineTo(p.x - 3, p.y + 14);
+          wCtx.stroke();
+          p.y += p.speed * 3.4;
+          p.x -= 1.2;
+        } else if (isSnow) {
+          wCtx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+          wCtx.beginPath();
+          wCtx.arc(p.x, p.y, p.size + 1, 0, Math.PI * 2);
+          wCtx.fill();
+          p.y += p.speed * 0.55;
+          p.x += Math.sin(p.y * 0.02) * 0.8;
+        } else {
+          const twinkle = 0.25 + 0.55 * Math.abs(Math.sin(Date.now() * 0.002 + p.x));
+          wCtx.fillStyle = `rgba(255, 224, 145, ${twinkle})`;
+          wCtx.beginPath();
+          wCtx.arc(p.x, p.y, p.size * 0.9, 0, Math.PI * 2);
+          wCtx.fill();
+          p.y -= p.speed * 0.16;
+          p.x += p.drift * 0.35;
+        }
+
+        if (p.y > wCanvas.height) { p.y = -10; p.x = Math.random() * wCanvas.width; }
+        if (p.y < -10) { p.y = wCanvas.height + 10; p.x = Math.random() * wCanvas.width; }
+        if (p.x < 0) p.x = wCanvas.width;
+        if (p.x > wCanvas.width) p.x = 0;
+      });
+    }
+    requestAnimationFrame(renderWeatherLoop);
+  }
+  renderWeatherLoop();
+
+  function moveHedwigTo(index, animateFlight = true) {
+    cards.forEach((c, i) => c.classList.toggle('selected', i === index));
+    const target = cards[index];
+    const rect = target.getBoundingClientRect();
+
+    const targetX = rect.left + (rect.width / 2) - 54;
+    const targetY = rect.top - 78;
+
+    if (animateFlight) {
+      hedwig.classList.remove('perched');
+      hedwig.classList.add('flying');
+      clearTimeout(flyTimeout);
+      flyTimeout = setTimeout(() => {
+        hedwig.classList.remove('flying');
+        hedwig.classList.add('perched');
+      }, 620);
+    }
+
+    hedwig.style.left = `${targetX}px`;
+    hedwig.style.top = `${targetY}px`;
+  }
+
+  window.onRemoteKey = function(key) {
+    if (menuOpen) {
+      const items = ['optWeather', 'optWallpaper', 'optClearPad', 'optSysSettings'];
+      if (key === 'UP') menuIndex = (menuIndex - 1 + items.length) % items.length;
+      if (key === 'DOWN') menuIndex = (menuIndex + 1) % items.length;
+      items.forEach((id, i) => document.getElementById(id).classList.toggle('active', i === menuIndex));
+
+      if (key === 'ENTER') {
+        if (menuIndex === 0) {
+          weatherEnabled = !weatherEnabled;
+          localStorage.setItem('hp_weather_enabled', weatherEnabled);
+          updateSettingsLabels();
+          applyWallpaperAndAtmosphere();
+          if (weatherEnabled) fetchWeather();
+        } else if (menuIndex === 1) {
+          const next = manualSceneIndex === null ? 1 : (parseInt(manualSceneIndex, 10) + 1) % SCENES.length;
+          manualSceneIndex = String(next);
+          localStorage.setItem('hp_manual_scene', manualSceneIndex);
+          updateSettingsLabels();
+          applyWallpaperAnd
