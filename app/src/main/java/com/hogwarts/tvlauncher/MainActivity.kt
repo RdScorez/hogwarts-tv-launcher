@@ -28,8 +28,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        webView = WebView(this)
+        webView = WebView(this).apply {
+            isFocusable = true
+            isFocusableInTouchMode = true
+        }
         setContentView(webView)
+        webView.requestFocus()
 
         webView.settings.apply {
             javaScriptEnabled = true
@@ -41,11 +45,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         webView.webChromeClient = WebChromeClient()
-        webView.webViewClient = WebViewClient()
+        webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                webView.requestFocus()
+            }
+        }
         webView.addJavascriptInterface(TvBridge(), "AndroidBridge")
 
         startLocalPadServer()
         webView.loadUrl("file:///android_asset/index.html")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::webView.isInitialized) {
+            webView.requestFocus()
+        }
     }
 
     private fun startLocalPadServer() {
@@ -63,36 +79,28 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        webView.evaluateJavascript("if(window.handleBackKey) window.handleBackKey();", null)
+    private fun sendKeyToJs(action: String) {
+        runOnUiThread {
+            webView.evaluateJavascript("if(window.onRemoteKey){window.onRemoteKey('$action');}", null)
+        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    webView.evaluateJavascript("window.onRemoteKey && window.onRemoteKey('LEFT')", null)
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    webView.evaluateJavascript("window.onRemoteKey && window.onRemoteKey('RIGHT')", null)
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_UP -> {
-                    webView.evaluateJavascript("window.onRemoteKey && window.onRemoteKey('UP')", null)
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    webView.evaluateJavascript("window.onRemoteKey && window.onRemoteKey('DOWN')", null)
-                    return true
-                }
-                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    webView.evaluateJavascript("window.onRemoteKey && window.onRemoteKey('ENTER')", null)
-                    return true
-                }
-                KeyEvent.KEYCODE_MENU -> {
-                    webView.evaluateJavascript("window.onRemoteKey && window.onRemoteKey('MENU')", null)
+                KeyEvent.KEYCODE_DPAD_LEFT -> { sendKeyToJs("LEFT"); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> { sendKeyToJs("RIGHT"); return true }
+                KeyEvent.KEYCODE_DPAD_UP -> { sendKeyToJs("UP"); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { sendKeyToJs("DOWN"); return true }
+                KeyEvent.KEYCODE_DPAD_CENTER,
+                KeyEvent.KEYCODE_ENTER,
+                KeyEvent.KEYCODE_NUMPAD_ENTER -> { sendKeyToJs("ENTER"); return true }
+                KeyEvent.KEYCODE_MENU,
+                KeyEvent.KEYCODE_INFO -> { sendKeyToJs("MENU"); return true }
+                KeyEvent.KEYCODE_BACK -> {
+                    runOnUiThread {
+                        webView.evaluateJavascript("if(window.handleBackKey){window.handleBackKey();}", null)
+                    }
                     return true
                 }
             }
