@@ -10,7 +10,6 @@
     background: #0a0b10; font-family: 'Georgia', 'Times New Roman', serif; color: #f6e7c1;
   }
 
-  /* Background & Day/Night Lighting Layers */
   #wallpaper {
     position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover;
     transition: opacity 1.2s ease, filter 1.5s ease; z-index: 1;
@@ -34,7 +33,6 @@
     background: rgba(14, 11, 8, 0.58); border: 1.5px solid rgba(218, 178, 96, 0.55);
     border-radius: 24px; padding: 16px 26px 16px 18px;
     box-shadow: 0 12px 36px rgba(0,0,0,0.65), inset 0 0 24px rgba(218, 178, 96, 0.14);
-    backdrop-filter: blur(6px);
   }
   #hogwartsClock { width: 170px; height: 170px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8)); }
   .clock-meta { display: flex; flex-direction: column; gap: 6px; }
@@ -75,7 +73,7 @@
     font-size: 11px; color: #694118; text-align: right;
   }
 
-  /* Bottom Dock: Only Netflix, YouTube, FanCode & JioHotstar */
+  /* Bottom Dock: Native Focusable Buttons for Android TV D-Pad */
   #dockWrapper {
     position: fixed; bottom: 54px; left: 0; right: 0; z-index: 15;
     display: flex; justify-content: center; align-items: flex-end;
@@ -83,26 +81,40 @@
   #appRow {
     display: flex; gap: 46px; align-items: center; position: relative;
     padding: 18px 42px; border-radius: 32px;
-    background: rgba(12, 10, 8, 0.52); border: 1px solid rgba(218, 178, 96, 0.35);
-    backdrop-filter: blur(8px); box-shadow: 0 16px 40px rgba(0,0,0,0.75);
+    background: rgba(12, 10, 8, 0.62); border: 1px solid rgba(218, 178, 96, 0.35);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.75);
   }
-  .app-card {
-    width: 178px; height: 116px; border-radius: 20px;
+  button.app-card {
+    appearance: none; -webkit-appearance: none; outline: none;
+    width: 178px; height: 116px; border-radius: 20px; cursor: pointer;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
-    background: rgba(26, 21, 16, 0.85); border: 2px solid rgba(185, 146, 74, 0.35);
+    background: rgba(26, 21, 16, 0.88); border: 2px solid rgba(185, 146, 74, 0.35);
     transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s, box-shadow 0.3s;
     position: relative;
   }
-  .app-card.selected {
+  button.app-card:focus, button.app-card.selected {
     transform: translateY(-14px) scale(1.1);
     border-color: #ffd670;
-    box-shadow: 0 14px 32px rgba(255, 204, 92, 0.42), inset 0 0 18px rgba(255, 214, 112, 0.25);
-    background: rgba(42, 32, 20, 0.95);
+    box-shadow: 0 14px 32px rgba(255, 204, 92, 0.48), inset 0 0 18px rgba(255, 214, 112, 0.25);
+    background: rgba(46, 35, 21, 0.98);
   }
   .app-badge {
     font-size: 24px; font-weight: 900; letter-spacing: 1px; font-family: 'Trebuchet MS', sans-serif;
   }
   .app-label { font-size: 13px; color: #dfcba3; letter-spacing: 0.8px; }
+
+  /* Subtle Settings Gear Button in Bottom-Right Corner */
+  #settingsBtn {
+    appearance: none; -webkit-appearance: none; outline: none;
+    position: fixed; bottom: 26px; right: 34px; z-index: 20;
+    background: rgba(24, 18, 12, 0.78); color: #e5be6b;
+    border: 1.5px solid rgba(218, 178, 96, 0.45); border-radius: 50px;
+    padding: 10px 18px; font-family: Georgia, serif; font-size: 14px;
+  }
+  #settingsBtn:focus {
+    border-color: #ffd670; background: #3d2d1c; color: #fff;
+    box-shadow: 0 0 18px rgba(255, 214, 112, 0.45); transform: scale(1.06);
+  }
 
   /* Animated Flying & Perching Hedwig */
   #hedwig {
@@ -121,26 +133,23 @@
   @keyframes flapRight { from { transform: rotate(28deg) scaleY(1.05); } to { transform: rotate(-34deg) scaleY(0.75); } }
   @keyframes owlBob { from { transform: translateY(-14px) scale(1.08); } to { transform: translateY(-2px) scale(1.02); } }
 
-  /* Subtle Bottom Hint & Quick Enchantment Drawer */
-  #bottomHint {
-    position: fixed; bottom: 14px; left: 0; right: 0; text-align: center;
-    font-size: 13px; color: rgba(235, 216, 178, 0.65); z-index: 12; letter-spacing: 0.6px;
-  }
+  /* Enchantment Drawer */
   #settingsModal {
-    position: fixed; inset: 0; background: rgba(6, 5, 10, 0.82); z-index: 50;
-    display: none; align-items: center; justify-content: center; backdrop-filter: blur(8px);
+    position: fixed; inset: 0; background: rgba(6, 5, 10, 0.85); z-index: 50;
+    display: none; align-items: center; justify-content: center;
   }
   .modal-box {
     width: 520px; background: #1c150e; border: 2px solid #c99b42; border-radius: 20px;
     padding: 26px 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.9);
   }
   .modal-box h3 { margin: 0 0 18px; color: #ffd778; text-align: center; font-size: 22px; }
-  .setting-item {
-    padding: 13px 16px; margin-bottom: 10px; border-radius: 12px;
-    background: #2b2015; border: 1.5px solid #5c4321;
+  button.setting-item {
+    appearance: none; -webkit-appearance: none; outline: none; width: 100%;
+    padding: 14px 16px; margin-bottom: 10px; border-radius: 12px; color: #f6e7c1;
+    background: #2b2015; border: 1.5px solid #5c4321; font-family: Georgia, serif;
     display: flex; justify-content: space-between; align-items: center; font-size: 16px;
   }
-  .setting-item.active { border-color: #ffd778; background: #3d2d1c; box-shadow: 0 0 16px rgba(255,215,120,0.25); }
+  button.setting-item:focus { border-color: #ffd778; background: #3d2d1c; box-shadow: 0 0 16px rgba(255,215,120,0.35); }
 </style>
 </head>
 <body>
@@ -163,14 +172,11 @@
       <circle cx="100" cy="100" r="95" fill="url(#dialGrad)" stroke="#d8ab4e" stroke-width="4" />
       <circle cx="100" cy="100" r="86" fill="none" stroke="#8a6626" stroke-width="1.2" stroke-dasharray="3 3" />
       <g id="clockTicks"></g>
-      <!-- Roman Numerals -->
       <text x="100" y="31" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">XII</text>
       <text x="169" y="105" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">III</text>
       <text x="100" y="179" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">VI</text>
       <text x="31" y="105" fill="#f3cf7a" font-size="14" font-weight="bold" text-anchor="middle">IX</text>
-      <!-- Decorative Center Crest -->
       <polygon points="100,82 105,95 118,100 105,105 100,118 95,105 82,100 95,95" fill="rgba(216,171,78,0.25)" />
-      <!-- Hands -->
       <line id="hourHand" x1="100" y1="100" x2="100" y2="54" stroke="#f6d27a" stroke-width="5.5" stroke-linecap="round" />
       <line id="minHand" x1="100" y1="100" x2="100" y2="34" stroke="#fff2cf" stroke-width="3.5" stroke-linecap="round" />
       <line id="secHand" x1="100" y1="112" x2="100" y2="28" stroke="#c94a38" stroke-width="1.6" stroke-linecap="round" />
@@ -199,80 +205,71 @@
   <!-- Flying & Perching Hedwig SVG -->
   <div id="hedwig" class="perched">
     <svg viewBox="0 0 140 120" width="108" height="96">
-      <!-- Left Wing -->
       <path class="wing-left" d="M52,58 C24,36 4,46 6,66 C18,68 36,68 52,66 Z" fill="#f7f7f9" stroke="#cfd4dc" stroke-width="1.5"/>
-      <!-- Right Wing -->
       <path class="wing-right" d="M88,58 C116,36 136,46 134,66 C122,68 104,68 88,66 Z" fill="#f7f7f9" stroke="#cfd4dc" stroke-width="1.5"/>
-      <!-- Tail Feathers -->
       <polygon points="62,92 70,112 78,92" fill="#e6e9ef" />
-      <!-- Snowy Body -->
       <ellipse cx="70" cy="68" rx="22" ry="28" fill="#ffffff" stroke="#d5dae2" stroke-width="1.5"/>
-      <!-- Subtle Snowy Owl Speckles -->
       <path d="M58,64 Q61,67 64,64 M75,66 Q78,69 81,66 M61,76 Q64,79 67,76 M73,77 Q76,80 79,77 M67,84 Q70,87 73,84"
             stroke="#6b7280" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      <!-- Head -->
       <circle cx="70" cy="38" r="17" fill="#ffffff" stroke="#d5dae2" stroke-width="1.5"/>
-      <!-- Facial Disc & Amber Eyes -->
       <circle cx="63" cy="37" r="4.3" fill="#f59e0b" />
       <circle cx="63" cy="37" r="2.1" fill="#111827" />
       <circle cx="62" cy="36" r="0.8" fill="#ffffff" />
       <circle cx="77" cy="37" r="4.3" fill="#f59e0b" />
       <circle cx="77" cy="37" r="2.1" fill="#111827" />
       <circle cx="76" cy="36" r="0.8" fill="#ffffff" />
-      <!-- Beak -->
       <polygon points="67,41 73,41 70,47" fill="#374151" />
-      <!-- Talons -->
       <path d="M61,95 L58,102 M63,95 L63,103 M77,95 L77,103 M79,95 L82,102" stroke="#d97706" stroke-width="2.2" stroke-linecap="round"/>
     </svg>
   </div>
 
-  <!-- Bottom App Dock (Strictly 4 Apps) -->
+  <!-- Bottom App Dock (4 Native Focusable Buttons) -->
   <div id="dockWrapper">
     <div id="appRow">
-      <div class="app-card selected" data-pkg="com.netflix.ninja">
+      <button class="app-card selected" data-pkg="com.netflix.ninja">
         <div class="app-badge" style="color:#E50914;">NETFLIX</div>
         <div class="app-label">Netflix</div>
-      </div>
-      <div class="app-card" data-pkg="com.google.android.youtube.tv">
+      </button>
+      <button class="app-card" data-pkg="com.google.android.youtube.tv">
         <div class="app-badge" style="color:#FF2A2A;">▶ YouTube</div>
         <div class="app-label">YouTube</div>
-      </div>
-      <div class="app-card" data-pkg="com.fancode.tv">
+      </button>
+      <button class="app-card" data-pkg="com.fancode.tv">
         <div class="app-badge" style="color:#FF6B00;">FANCODE</div>
         <div class="app-label">FanCode</div>
-      </div>
-      <div class="app-card" data-pkg="in.startv.hotstar">
+      </button>
+      <button class="app-card" data-pkg="in.startv.hotstar">
         <div class="app-badge" style="color:#38BDF8;">JioHotstar</div>
         <div class="app-label">JioHotstar</div>
-      </div>
+      </button>
     </div>
   </div>
 
-  <div id="bottomHint">◀ ▶ Move Hedwig • OK Open App • ▼ Enchantment Settings</div>
+  <button id="settingsBtn">✦ Enchantments</button>
 
   <!-- Enchantment Settings Drawer -->
   <div id="settingsModal">
     <div class="modal-box">
       <h3>✦ Hogwarts Enchantment Settings ✦</h3>
-      <div class="setting-item active" id="optWeather">
+      <button class="setting-item" id="optWeather">
         <span>Live Weather & Day/Night Cycle</span>
         <strong id="valWeather" style="color:#ffd778;">ON</strong>
-      </div>
-      <div class="setting-item" id="optWallpaper">
+      </button>
+      <button class="setting-item" id="optWallpaper">
         <span>Change Today's Wizarding Scene</span>
         <strong id="valWallpaper" style="color:#ffd778;">Auto (Daily)</strong>
-      </div>
-      <div class="setting-item" id="optClearPad">
+      </button>
+      <button class="setting-item" id="optClearPad">
         <span>Clear Marauder's Corner Note</span>
         <strong style="color:#f87171;">Clear</strong>
-      </div>
-      <div class="setting-item" id="optSysSettings">
+      </button>
+      <button class="setting-item" id="optSysSettings">
         <span>Open Sony Android TV Settings</span>
         <strong>Open →</strong>
-      </div>
-      <div style="text-align:center;font-size:13px;color:#bba378;margin-top:12px;">
-        Press ▲ / ▼ to choose • OK to toggle • Back to close
-      </div>
+      </button>
+      <button class="setting-item" id="optCloseModal" style="justify-content:center;color:#ffd778;">
+        Close Enchantments
+      </button>
     </div>
   </div>
 
@@ -287,18 +284,14 @@
     { file: 'bg_7.png', title: 'GRYFFINDOR COMMON ROOM' }
   ];
 
-  let selectedIndex = 0;
-  let menuOpen = false;
-  let menuIndex = 0;
   let flyTimeout = null;
-
   let weatherEnabled = localStorage.getItem('hp_weather_enabled') !== 'false';
   let manualSceneIndex = localStorage.getItem('hp_manual_scene');
   let currentWeatherCode = 0;
   let currentTemp = '';
   let isDayTime = true;
 
-  const cards = Array.from(document.querySelectorAll('.app-card'));
+  const cards = Array.from(document.querySelectorAll('button.app-card'));
   const hedwig = document.getElementById('hedwig');
 
   const ticksGroup = document.getElementById('clockTicks');
@@ -460,11 +453,9 @@
   }
   renderWeatherLoop();
 
-  function moveHedwigTo(index, animateFlight = true) {
-    cards.forEach((c, i) => c.classList.toggle('selected', i === index));
-    const target = cards[index];
-    const rect = target.getBoundingClientRect();
-
+  function flyHedwigToButton(btn, animateFlight = true) {
+    cards.forEach(c => c.classList.toggle('selected', c === btn));
+    const rect = btn.getBoundingClientRect();
     const targetX = rect.left + (rect.width / 2) - 54;
     const targetY = rect.top - 78;
 
@@ -482,65 +473,64 @@
     hedwig.style.top = `${targetY}px`;
   }
 
-  window.onRemoteKey = function(key) {
-    if (menuOpen) {
-      const items = ['optWeather', 'optWallpaper', 'optClearPad', 'optSysSettings'];
-      if (key === 'UP') menuIndex = (menuIndex - 1 + items.length) % items.length;
-      if (key === 'DOWN') menuIndex = (menuIndex + 1) % items.length;
-      items.forEach((id, i) => document.getElementById(id).classList.toggle('active', i === menuIndex));
-
-      if (key === 'ENTER') {
-        if (menuIndex === 0) {
-          weatherEnabled = !weatherEnabled;
-          localStorage.setItem('hp_weather_enabled', weatherEnabled);
-          updateSettingsLabels();
-          applyWallpaperAndAtmosphere();
-          if (weatherEnabled) fetchWeather();
-        } else if (menuIndex === 1) {
-          const next = manualSceneIndex === null ? 1 : (parseInt(manualSceneIndex, 10) + 1) % SCENES.length;
-          manualSceneIndex = String(next);
-          localStorage.setItem('hp_manual_scene', manualSceneIndex);
-          updateSettingsLabels();
-          applyWallpaperAndAtmosphere();
-        } else if (menuIndex === 2) {
-          if (window.AndroidBridge) window.AndroidBridge.clearPadState();
-          document.getElementById('parchmentText').textContent = 'Mischief managed.';
-          document.getElementById('parchmentImg').style.display = 'none';
-        } else if (menuIndex === 3) {
-          if (window.AndroidBridge) window.AndroidBridge.openSystemSettings();
-        }
-      }
-      return;
-    }
-
-    if (key === 'LEFT') {
-      selectedIndex = (selectedIndex - 1 + cards.length) % cards.length;
-      moveHedwigTo(selectedIndex, true);
-    } else if (key === 'RIGHT') {
-      selectedIndex = (selectedIndex + 1) % cards.length;
-      moveHedwigTo(selectedIndex, true);
-    } else if (key === 'ENTER') {
-      const pkg = cards[selectedIndex].getAttribute('data-pkg');
+  cards.forEach(btn => {
+    btn.addEventListener('focus', () => flyHedwigToButton(btn, true));
+    btn.addEventListener('click', () => {
+      const pkg = btn.getAttribute('data-pkg');
       if (window.AndroidBridge) window.AndroidBridge.launchApp(pkg);
-    } else if (key === 'DOWN' || key === 'MENU') {
-      menuOpen = true;
-      updateSettingsLabels();
-      document.getElementById('settingsModal').style.display = 'flex';
-    }
-  };
-
-  window.handleBackKey = function() {
-    if (menuOpen) {
-      menuOpen = false;
-      document.getElementById('settingsModal').style.display = 'none';
-    }
-  };
+    });
+  });
 
   function updateSettingsLabels() {
     document.getElementById('valWeather').textContent = weatherEnabled ? 'ON' : 'OFF';
     const idx = manualSceneIndex !== null ? parseInt(manualSceneIndex, 10) % SCENES.length : null;
     document.getElementById('valWallpaper').textContent = idx !== null ? SCENES[idx].title : 'Auto (Daily)';
   }
+
+  document.getElementById('settingsBtn').addEventListener('click', () => {
+    updateSettingsLabels();
+    document.getElementById('settingsModal').style.display = 'flex';
+    document.getElementById('optWeather').focus();
+  });
+
+  document.getElementById('optWeather').addEventListener('click', () => {
+    weatherEnabled = !weatherEnabled;
+    localStorage.setItem('hp_weather_enabled', weatherEnabled);
+    updateSettingsLabels();
+    applyWallpaperAndAtmosphere();
+    if (weatherEnabled) fetchWeather();
+  });
+
+  document.getElementById('optWallpaper').addEventListener('click', () => {
+    const next = manualSceneIndex === null ? 1 : (parseInt(manualSceneIndex, 10) + 1) % SCENES.length;
+    manualSceneIndex = String(next);
+    localStorage.setItem('hp_manual_scene', manualSceneIndex);
+    updateSettingsLabels();
+    applyWallpaperAndAtmosphere();
+  });
+
+  document.getElementById('optClearPad').addEventListener('click', () => {
+    if (window.AndroidBridge) window.AndroidBridge.clearPadState();
+    document.getElementById('parchmentText').textContent = 'Mischief managed.';
+    document.getElementById('parchmentImg').style.display = 'none';
+  });
+
+  document.getElementById('optSysSettings').addEventListener('click', () => {
+    if (window.AndroidBridge) window.AndroidBridge.openSystemSettings();
+  });
+
+  document.getElementById('optCloseModal').addEventListener('click', () => {
+    document.getElementById('settingsModal').style.display = 'none';
+    cards[0].focus();
+  });
+
+  window.handleBackKey = function() {
+    const modal = document.getElementById('settingsModal');
+    if (modal.style.display === 'flex') {
+      modal.style.display = 'none';
+      cards[0].focus();
+    }
+  };
 
   let lastPadUpdated = 0;
   function pollPhoneParchment() {
@@ -558,3 +548,27 @@
           imgEl.style.display = 'block';
         } else {
           imgEl.style.display = 'none';
+        }
+      }
+    } catch (_e) {}
+  }
+
+  window.addEventListener('load', () => {
+    applyWallpaperAndAtmosphere();
+    fetchWeather();
+    setInterval(fetchWeather, 15 * 60 * 1000);
+    setInterval(applyWallpaperAndAtmosphere, 60 * 1000);
+    setInterval(pollPhoneParchment, 700);
+
+    if (window.AndroidBridge) {
+      const ip = window.AndroidBridge.getLocalIpAddress();
+      document.getElementById('padUrlHint').textContent = `Phone Pad: http://${ip}:8080`;
+    }
+    setTimeout(() => {
+      cards[0].focus();
+      flyHedwigToButton(cards[0], false);
+    }, 200);
+  });
+</script>
+</body>
+</html>
