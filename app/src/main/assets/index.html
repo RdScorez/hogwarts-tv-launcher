@@ -501,4 +501,60 @@
           manualSceneIndex = String(next);
           localStorage.setItem('hp_manual_scene', manualSceneIndex);
           updateSettingsLabels();
-          applyWallpaperAnd
+          applyWallpaperAndAtmosphere();
+        } else if (menuIndex === 2) {
+          if (window.AndroidBridge) window.AndroidBridge.clearPadState();
+          document.getElementById('parchmentText').textContent = 'Mischief managed.';
+          document.getElementById('parchmentImg').style.display = 'none';
+        } else if (menuIndex === 3) {
+          if (window.AndroidBridge) window.AndroidBridge.openSystemSettings();
+        }
+      }
+      return;
+    }
+
+    if (key === 'LEFT') {
+      selectedIndex = (selectedIndex - 1 + cards.length) % cards.length;
+      moveHedwigTo(selectedIndex, true);
+    } else if (key === 'RIGHT') {
+      selectedIndex = (selectedIndex + 1) % cards.length;
+      moveHedwigTo(selectedIndex, true);
+    } else if (key === 'ENTER') {
+      const pkg = cards[selectedIndex].getAttribute('data-pkg');
+      if (window.AndroidBridge) window.AndroidBridge.launchApp(pkg);
+    } else if (key === 'DOWN' || key === 'MENU') {
+      menuOpen = true;
+      updateSettingsLabels();
+      document.getElementById('settingsModal').style.display = 'flex';
+    }
+  };
+
+  window.handleBackKey = function() {
+    if (menuOpen) {
+      menuOpen = false;
+      document.getElementById('settingsModal').style.display = 'none';
+    }
+  };
+
+  function updateSettingsLabels() {
+    document.getElementById('valWeather').textContent = weatherEnabled ? 'ON' : 'OFF';
+    const idx = manualSceneIndex !== null ? parseInt(manualSceneIndex, 10) % SCENES.length : null;
+    document.getElementById('valWallpaper').textContent = idx !== null ? SCENES[idx].title : 'Auto (Daily)';
+  }
+
+  let lastPadUpdated = 0;
+  function pollPhoneParchment() {
+    if (!window.AndroidBridge) return;
+    try {
+      const raw = window.AndroidBridge.getPadState();
+      const data = JSON.parse(raw);
+      if (data.updated && data.updated !== lastPadUpdated) {
+        lastPadUpdated = data.updated;
+        const textEl = document.getElementById('parchmentText');
+        const imgEl = document.getElementById('parchmentImg');
+        textEl.textContent = data.text || (data.image ? '' : 'I solemnly swear that I am up to no good...');
+        if (data.image && data.image.startsWith('data:image')) {
+          imgEl.src = data.image;
+          imgEl.style.display = 'block';
+        } else {
+          imgEl.style.display = 'none';
