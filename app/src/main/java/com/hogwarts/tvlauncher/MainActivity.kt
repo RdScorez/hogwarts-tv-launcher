@@ -5,11 +5,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.view.KeyEvent
+import android.view.View
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import fi.iki.elonen.NanoHTTPD
@@ -19,6 +22,7 @@ import java.net.NetworkInterface
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private lateinit var remoteCatcher: View
     private var padServer: PadMirrorServer? = null
 
     @Volatile
@@ -28,12 +32,47 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val root = FrameLayout(this)
+
         webView = WebView(this).apply {
+            isFocusable = false
+            isFocusableInTouchMode = false
+        }
+
+        // Transparent native Android TV view that permanently holds D-pad focus
+        remoteCatcher = object : View(this) {
+            override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+                return handleTvKey(keyCode) || super.onKeyDown(keyCode, event)
+            }
+        }.apply {
             isFocusable = true
             isFocusableInTouchMode = true
+            setOnKeyListener { _, keyCode, event ->
+                if (event.action == KeyEvent.ACTION_DOWN) {
+                    handleTvKey(keyCode)
+                } else {
+                    false
+                }
+            }
         }
-        setContentView(webView)
-        webView.requestFocus()
+
+        root.addView(
+            webView,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+        root.addView(
+            remoteCatcher,
+            FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        setContentView(root)
+        remoteCatcher.requestFocus()
 
         webView.settings.apply {
             javaScriptEnabled = true
@@ -48,7 +87,7 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                webView.requestFocus()
+                remoteCatcher.requestFocus()
             }
         }
         webView.addJavascriptInterface(TvBridge(), "AndroidBridge")
@@ -59,9 +98,52 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::webView.isInitialized) {
-            webView.requestFocus()
+        if (::remoteCatcher.isInitialized) {
+            remoteCatcher.requestFocus()
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && ::remoteCatcher.isInitialized) {
+            remoteCatcher.requestFocus()
+        }
+    }
+
+    private fun handleTvKey(keyCode: Int): Boolean {
+        val action = when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_LEFT -> "LEFT"
+            KeyEvent.KEYCODE_DPAD_RIGHT -> "RIGHT"
+            KeyEvent.KEYCODE_DPAD_UP -> "UP"
+            KeyEvent.KEYCODE_DPAD_DOWN -> "DOWN"
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER -> "ENTER"
+            KeyEvent.KEYCODE_MENU,
+            KeyEvent.KEYCODE_INFO -> "MENU"
+            KeyEvent.KEYCODE_BACK -> {
+                runOnUiThread {
+                    webView.evaluateJavascript("if(window.handleBackKey){window.handleBackKey();}", null)
+                }
+                return true
+            }
+            else -> return false
+        }
+        sendKeyToJs(action)
+        return true
+    }
+
+    private fun sendKeyToJs(action: String) {
+        runOnUiThread {
+            webView.evaluateJavascript("if(window.onRemoteKey){window.onRemoteKey('$action');}", null)
+        }
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN && handleTvKey(event.keyCode)) {
+            return true
+        }
+        return super.dispatchKeyEvent(event)
     }
 
     private fun startLocalPadServer() {
@@ -77,35 +159,6 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         padServer?.stop()
         super.onDestroy()
-    }
-
-    private fun sendKeyToJs(action: String) {
-        runOnUiThread {
-            webView.evaluateJavascript("if(window.onRemoteKey){window.onRemoteKey('$action');}", null)
-        }
-    }
-
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            when (event.keyCode) {
-                KeyEvent.KEYCODE_DPAD_LEFT -> { sendKeyToJs("LEFT"); return true }
-                KeyEvent.KEYCODE_DPAD_RIGHT -> { sendKeyToJs("RIGHT"); return true }
-                KeyEvent.KEYCODE_DPAD_UP -> { sendKeyToJs("UP"); return true }
-                KeyEvent.KEYCODE_DPAD_DOWN -> { sendKeyToJs("DOWN"); return true }
-                KeyEvent.KEYCODE_DPAD_CENTER,
-                KeyEvent.KEYCODE_ENTER,
-                KeyEvent.KEYCODE_NUMPAD_ENTER -> { sendKeyToJs("ENTER"); return true }
-                KeyEvent.KEYCODE_MENU,
-                KeyEvent.KEYCODE_INFO -> { sendKeyToJs("MENU"); return true }
-                KeyEvent.KEYCODE_BACK -> {
-                    runOnUiThread {
-                        webView.evaluateJavascript("if(window.handleBackKey){window.handleBackKey();}", null)
-                    }
-                    return true
-                }
-            }
-        }
-        return super.dispatchKeyEvent(event)
     }
 
     inner class TvBridge {
